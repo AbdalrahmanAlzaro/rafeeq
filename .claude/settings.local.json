@@ -4,7 +4,10 @@
       "Bash(for f:*)",
       "Bash(do echo:*)",
       "Read(//c/Users/user/Desktop/rafeeq/**)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(node -e \"require\\(''bcryptjs''\\); console.log\\(''bcryptjs ok''\\)\")",
+      "Bash(node -e \"require\\(''bcryptjs''\\); console.log\\(''ok''\\)\")",
+      "Bash(node:*)"
     ]
   }
 }
