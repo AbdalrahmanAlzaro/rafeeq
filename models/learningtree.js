@@ -1,30 +1,69 @@
-"use strict";
-const { Model } = require("sequelize");
+'use strict';
+const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
   class LearningTree extends Model {
     static associate(models) {
-      LearningTree.belongsTo(models.Child, { foreignKey: "child_id" });
-      LearningTree.belongsTo(models.ExamAssignment, { foreignKey: "exam_assignment_id" });
-      LearningTree.belongsTo(models.ChildNote, { foreignKey: "child_notes_id" });
-      LearningTree.hasMany(models.TreeBranch, { foreignKey: "learning_tree_id" });
+      LearningTree.belongsTo(models.Child, { foreignKey: 'child_id' });
+      LearningTree.belongsTo(models.Exam, { foreignKey: 'exam_id' });
+      LearningTree.belongsTo(models.Subject, { foreignKey: 'subject_id' });
+      LearningTree.belongsTo(models.SubjectLevel, { foreignKey: 'subject_level_id' });
+      LearningTree.hasMany(models.TreeTask, { foreignKey: 'learning_tree_id' });
     }
   }
 
   LearningTree.init(
     {
-      child_id: { type: DataTypes.INTEGER, allowNull: false },
-      exam_assignment_id: { type: DataTypes.INTEGER, allowNull: false },
-      child_notes_id: { type: DataTypes.INTEGER, allowNull: true },
-      status: {
-        type: DataTypes.ENUM("generating", "active", "completed"),
+      id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
         allowNull: false,
-        defaultValue: "generating",
       },
-      ai_summary: { type: DataTypes.TEXT, allowNull: true },
-      generated_at: { type: DataTypes.DATE, allowNull: true },
+      child_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      exam_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      subject_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      subject_level_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      current_level: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1,
+      },
+      status: {
+        type: DataTypes.ENUM('generating', 'active', 'completed'),
+        allowNull: false,
+        defaultValue: 'generating',
+      },
+      ai_summary_en: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      ai_summary_ar: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      generated_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
     },
-    { sequelize, modelName: "LearningTree" },
+    {
+      sequelize,
+      modelName: 'LearningTree',
+      tableName: 'learning_trees',
+    }
   );
 
   return LearningTree;

@@ -7,7 +7,10 @@
       "Bash(done)",
       "Bash(node -e \"require\\(''bcryptjs''\\); console.log\\(''bcryptjs ok''\\)\")",
       "Bash(node -e \"require\\(''bcryptjs''\\); console.log\\(''ok''\\)\")",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(rm migrations/*.js)",
+      "Bash(rm models/activitydetail.js models/article.js models/assignmentfeedback.js models/assignmentsubmission.js models/child.js models/childnote.js models/exam.js models/examanswer.js models/examassignment.js models/examquestion.js models/examresult.js models/examsubject.js models/learningtree.js models/manualassignment.js models/manualquiz.js models/manualquizanswer.js models/manualquizattempt.js models/manualquizquestion.js models/message.js models/notification.js models/progressreport.js models/questionbank.js models/school.js models/subject.js models/taskdetail.js models/taskquiz.js models/taskquizanswer.js models/taskquizattempt.js models/taskquizquestion.js models/teacher.js models/treebranch.js models/treetask.js models/user.js)",
+      "Bash(npx sequelize-cli:*)"
     ]
   }
 }

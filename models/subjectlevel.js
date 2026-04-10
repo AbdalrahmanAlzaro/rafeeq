@@ -2,13 +2,15 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-  class Notification extends Model {
+  class SubjectLevel extends Model {
     static associate(models) {
-      Notification.belongsTo(models.User, { foreignKey: 'user_id' });
+      SubjectLevel.belongsTo(models.Subject, { foreignKey: 'subject_id' });
+      SubjectLevel.hasMany(models.QuestionBank, { foreignKey: 'subject_level_id' });
+      SubjectLevel.hasMany(models.LearningTree, { foreignKey: 'subject_level_id' });
     }
   }
 
-  Notification.init(
+  SubjectLevel.init(
     {
       id: {
         type: DataTypes.INTEGER,
@@ -16,7 +18,11 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         allowNull: false,
       },
-      user_id: {
+      subject_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      level_number: {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
@@ -28,30 +34,21 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      body_en: {
-        type: DataTypes.TEXT,
-        allowNull: false,
-      },
-      body_ar: {
+      description_en: {
         type: DataTypes.TEXT,
         allowNull: true,
       },
-      type: {
-        type: DataTypes.ENUM('assignment', 'quiz', 'homework', 'message', 'tree_ready', 'task_confirmed', 'announcement'),
-        allowNull: false,
-      },
-      is_read: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
+      description_ar: {
+        type: DataTypes.TEXT,
+        allowNull: true,
       },
     },
     {
       sequelize,
-      modelName: 'Notification',
-      tableName: 'notifications',
+      modelName: 'SubjectLevel',
+      tableName: 'subject_levels',
     }
   );
 
-  return Notification;
+  return SubjectLevel;
 };
