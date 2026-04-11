@@ -1,12 +1,17 @@
-'use strict';
-const { Model } = require('sequelize');
+"use strict";
+const { Model } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
   class QuestionBank extends Model {
     static associate(models) {
-      QuestionBank.belongsTo(models.Subject, { foreignKey: 'subject_id' });
-      QuestionBank.belongsTo(models.SubjectLevel, { foreignKey: 'subject_level_id' });
-      QuestionBank.belongsTo(models.User, { foreignKey: 'teacher_user_id', as: 'Teacher' });
+      QuestionBank.belongsTo(models.Subject, { foreignKey: "subject_id" });
+      QuestionBank.belongsTo(models.SubjectLevel, {
+        foreignKey: "subject_level_id",
+      });
+      QuestionBank.belongsTo(models.User, {
+        foreignKey: "teacher_user_id",
+        as: "Teacher",
+      });
     }
   }
 
@@ -28,7 +33,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       teacher_user_id: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
       },
       question_text_en: {
         type: DataTypes.TEXT,
@@ -47,9 +52,9 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       difficulty: {
-        type: DataTypes.ENUM('easy', 'medium', 'hard'),
+        type: DataTypes.ENUM("easy", "medium", "hard"),
         allowNull: false,
-        defaultValue: 'medium',
+        defaultValue: "medium",
       },
       points: {
         type: DataTypes.INTEGER,
@@ -59,9 +64,9 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       sequelize,
-      modelName: 'QuestionBank',
-      tableName: 'question_banks',
-    }
+      modelName: "QuestionBank",
+      tableName: "question_banks",
+    },
   );
 
   return QuestionBank;
