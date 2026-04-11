@@ -42,9 +42,7 @@ const getAllSubjects = async (req, res) => {
       include: [
         {
           model: SubjectLevel,
-          as: "SubjectLevels",
           attributes: ["id", "level_number", "title_en", "title_ar"],
-          order: [["level_number", "ASC"]],
           required: false,
         },
       ],
@@ -69,7 +67,6 @@ const getSubject = async (req, res) => {
       include: [
         {
           model: SubjectLevel,
-          as: "SubjectLevels",
           attributes: [
             "id",
             "level_number",
@@ -78,7 +75,6 @@ const getSubject = async (req, res) => {
             "description_en",
             "description_ar",
           ],
-          order: [["level_number", "ASC"]],
           required: false,
         },
       ],
