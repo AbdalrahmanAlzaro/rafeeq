@@ -1,4 +1,4 @@
-const { QuestionBank, Subject, SubjectLevel, User } = require("../models");
+const { QuestionBank, Subject, SubjectLevel } = require("../models");
 
 const addQuestion = async (req, res) => {
   try {
@@ -56,7 +56,7 @@ const addQuestion = async (req, res) => {
     const question = await QuestionBank.create({
       subject_id,
       subject_level_id,
-      teacher_user_id: req.user.id,
+      teacher_user_id: null,
       question_text_en,
       question_text_ar: question_text_ar || null,
       options,
@@ -77,44 +77,7 @@ const addQuestion = async (req, res) => {
   }
 };
 
-const getMyQuestions = async (req, res) => {
-  try {
-    const { subject_id, subject_level_id, difficulty } = req.query;
-
-    const where = { teacher_user_id: req.user.id };
-
-    if (subject_id) where.subject_id = subject_id;
-    if (subject_level_id) where.subject_level_id = subject_level_id;
-    if (difficulty) where.difficulty = difficulty;
-
-    const questions = await QuestionBank.findAll({
-      where,
-      include: [
-        {
-          model: Subject,
-          attributes: ["id", "name_en", "name_ar", "color_code"],
-        },
-        {
-          model: SubjectLevel,
-          attributes: ["id", "level_number", "title_en", "title_ar"],
-        },
-      ],
-      order: [["createdAt", "DESC"]],
-    });
-
-    return res.status(200).json({
-      total: questions.length,
-      questions,
-    });
-  } catch (err) {
-    console.error(err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
-  }
-};
-
-const getAllQuestions = async (req, res) => {
+const getQuestions = async (req, res) => {
   try {
     const { subject_id, subject_level_id, difficulty } = req.query;
 
@@ -134,11 +97,6 @@ const getAllQuestions = async (req, res) => {
         {
           model: SubjectLevel,
           attributes: ["id", "level_number", "title_en", "title_ar"],
-        },
-        {
-          model: User,
-          as: "Teacher",
-          attributes: ["id", "name_en", "name_ar"],
         },
       ],
       order: [["createdAt", "DESC"]],
@@ -168,23 +126,11 @@ const getQuestion = async (req, res) => {
           model: SubjectLevel,
           attributes: ["id", "level_number", "title_en", "title_ar"],
         },
-        {
-          model: User,
-          as: "Teacher",
-          attributes: ["id", "name_en", "name_ar"],
-        },
       ],
     });
 
     if (!question) {
       return res.status(404).json({ message: "Question not found" });
-    }
-
-    const isOwner = question.teacher_user_id === req.user.id;
-    const isAdmin = req.user.role === "school_admin";
-
-    if (!isOwner && !isAdmin) {
-      return res.status(403).json({ message: "Access denied" });
     }
 
     return res.status(200).json({ question });
@@ -202,12 +148,6 @@ const updateQuestion = async (req, res) => {
 
     if (!question) {
       return res.status(404).json({ message: "Question not found" });
-    }
-
-    if (question.teacher_user_id !== req.user.id) {
-      return res
-        .status(403)
-        .json({ message: "You can only update your own questions" });
     }
 
     const {
@@ -284,15 +224,6 @@ const deleteQuestion = async (req, res) => {
       return res.status(404).json({ message: "Question not found" });
     }
 
-    if (
-      question.teacher_user_id !== req.user.id &&
-      req.user.role !== "school_admin"
-    ) {
-      return res
-        .status(403)
-        .json({ message: "You can only delete your own questions" });
-    }
-
     await question.destroy();
 
     return res.status(200).json({ message: "Question deleted successfully" });
@@ -343,9 +274,11 @@ const getQuestionsBySubjectAndLevel = async (req, res) => {
     return res.status(200).json({
       subject_id: subject.id,
       subject_name_en: subject.name_en,
+      subject_name_ar: subject.name_ar,
       level_id: level.id,
       level_number: level.level_number,
       level_title_en: level.title_en,
+      level_title_ar: level.title_ar,
       total: questions.length,
       questions,
     });
@@ -359,8 +292,7 @@ const getQuestionsBySubjectAndLevel = async (req, res) => {
 
 module.exports = {
   addQuestion,
-  getMyQuestions,
-  getAllQuestions,
+  getQuestions,
   getQuestion,
   updateQuestion,
   deleteQuestion,
