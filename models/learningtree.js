@@ -5,6 +5,7 @@ module.exports = (sequelize) => {
   class LearningTree extends Model {
     static associate(models) {
       LearningTree.belongsTo(models.ChildProfile, { foreignKey: 'child_id' });
+      LearningTree.belongsTo(models.Topic, { foreignKey: 'topic_id' });
       LearningTree.hasMany(models.TreeItem, { foreignKey: 'tree_id' });
       LearningTree.hasMany(models.ChildScore, { foreignKey: 'tree_id' });
       LearningTree.hasMany(models.ChildScoreLog, { foreignKey: 'tree_id' });
@@ -27,9 +28,9 @@ module.exports = (sequelize) => {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
-      topic: {
-        type: DataTypes.STRING(255),
-        allowNull: false,
+      topic_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
       },
       status: {
         type: DataTypes.STRING(20),

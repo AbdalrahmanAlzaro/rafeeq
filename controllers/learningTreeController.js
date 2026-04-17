@@ -69,7 +69,12 @@ const completeTreeItem = async (req, res) => {
 
     const { earned_points, max_points, content_type_id } = req.body;
 
-    await treeItem.update({ status: 'completed' });
+    await treeItem.update({
+      status: 'completed',
+      earned_points: earned_points || 0,
+      max_points: max_points || treeItem.max_points || 10,
+      completed_at: new Date(),
+    });
 
     await ChildScoreLog.create({
       id: uuidv4(),
@@ -77,20 +82,21 @@ const completeTreeItem = async (req, res) => {
       tree_id: tree.id,
       content_type_id: content_type_id || treeItem.content_type_id,
       item_id: treeItem.item_id,
-      max_points: max_points || 10,
+      max_points: max_points || treeItem.max_points || 10,
       earned_points: earned_points || 0,
       submitted_at: new Date(),
     });
 
     let scoreRecord = await ChildScore.findOne({ where: { child_id: tree.child_id, tree_id: tree.id } });
     if (scoreRecord) {
-      await scoreRecord.update({ total_score: scoreRecord.total_score + (earned_points || 0) });
+      await scoreRecord.update({ total_score: scoreRecord.total_score + (earned_points || 0), updated_at: new Date() });
     } else {
       scoreRecord = await ChildScore.create({
         id: uuidv4(),
         child_id: tree.child_id,
         tree_id: tree.id,
         total_score: earned_points || 0,
+        updated_at: new Date(),
       });
     }
 
@@ -126,37 +132,39 @@ const completeTreeItem = async (req, res) => {
           for (const task of treeData.tasks) {
             const content_type_id = contentTypeMap[task.content_type] || 1;
             const item_id = uuidv4();
+            const tree_item_id = uuidv4();
 
             if (task.content_type === 'quiz') {
               await Quiz.create({
                 id: item_id, child_id: child.id, level: nextLevel,
                 total_questions: 5, status: 'pending',
+                tree_id: newTree.id, tree_item_id,
               });
             } else if (task.content_type === 'homework') {
-              const Teacher = require('../models').Teacher;
-              const teacher = await Teacher.findByPk(child.teacher_id);
               await Homework.create({
                 id: item_id, teacher_id: child.teacher_id, child_id: child.id,
                 title_ar: task.title, description_ar: task.description,
                 start_date: new Date(),
                 due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
                 status: 'pending',
+                tree_id: newTree.id, tree_item_id,
               });
             } else if (task.content_type === 'activity') {
               await Activity.create({
                 id: item_id, child_id: child.id,
                 title: task.title, description: task.description, status: 'pending',
+                tree_id: newTree.id, tree_item_id,
               });
             }
 
             await TreeItem.create({
-              id: uuidv4(), tree_id: newTree.id,
-              content_type_id, item_id, status: 'pending', order_num: task.order,
+              id: tree_item_id, tree_id: newTree.id,
+              content_type_id, item_id, status: 'pending', order_num: task.order, max_points: 10,
             });
           }
 
           await ChildScore.create({
-            id: uuidv4(), child_id: child.id, tree_id: newTree.id, total_score: 0,
+            id: uuidv4(), child_id: child.id, tree_id: newTree.id, total_score: 0, updated_at: new Date(),
           });
 
           if (child.parent_id) {

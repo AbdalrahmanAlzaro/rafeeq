@@ -74,56 +74,6 @@ module.exports = (sequelize) => {
         allowNull: false,
         defaultValue: DataTypes.NOW,
       },
-      behavioral_notes_ar: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        defaultValue: null,
-      },
-      behavioral_notes_en: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        defaultValue: null,
-      },
-      communication_notes_ar: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        defaultValue: null,
-      },
-      communication_notes_en: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        defaultValue: null,
-      },
-      social_notes_ar: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        defaultValue: null,
-      },
-      social_notes_en: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        defaultValue: null,
-      },
-      attention_notes_ar: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        defaultValue: null,
-      },
-      attention_notes_en: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        defaultValue: null,
-      },
-      additional_notes_ar: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        defaultValue: null,
-      },
-      additional_notes_en: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        defaultValue: null,
-      },
     },
     {
       sequelize,

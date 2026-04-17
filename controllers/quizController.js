@@ -87,7 +87,12 @@ const submitQuiz = async (req, res) => {
     // Find tree item for this quiz
     const treeItem = await TreeItem.findOne({ where: { item_id: quiz.id, content_type_id: 1 } });
     if (treeItem) {
-      await treeItem.update({ status: 'completed' });
+      await treeItem.update({
+        status: 'completed',
+        earned_points: earnedPoints,
+        max_points: MAX_POINTS,
+        completed_at: new Date(),
+      });
 
       await ChildScoreLog.create({
         id: uuidv4(),
@@ -104,11 +109,11 @@ const submitQuiz = async (req, res) => {
         where: { child_id: child.id, tree_id: treeItem.tree_id },
       });
       if (scoreRecord) {
-        await scoreRecord.update({ total_score: scoreRecord.total_score + earnedPoints });
+        await scoreRecord.update({ total_score: scoreRecord.total_score + earnedPoints, updated_at: new Date() });
       } else {
         await ChildScore.create({
           id: uuidv4(), child_id: child.id,
-          tree_id: treeItem.tree_id, total_score: earnedPoints,
+          tree_id: treeItem.tree_id, total_score: earnedPoints, updated_at: new Date(),
         });
       }
     }

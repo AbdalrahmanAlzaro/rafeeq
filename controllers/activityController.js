@@ -32,7 +32,12 @@ const completeActivity = async (req, res) => {
 
     const treeItem = await TreeItem.findOne({ where: { item_id: activity.id, content_type_id: 3 } });
     if (treeItem) {
-      await treeItem.update({ status: 'completed' });
+      await treeItem.update({
+        status: 'completed',
+        earned_points: MAX_POINTS,
+        max_points: MAX_POINTS,
+        completed_at: new Date(),
+      });
 
       await ChildScoreLog.create({
         id: uuidv4(),
@@ -49,11 +54,11 @@ const completeActivity = async (req, res) => {
         where: { child_id: child.id, tree_id: treeItem.tree_id },
       });
       if (scoreRecord) {
-        await scoreRecord.update({ total_score: scoreRecord.total_score + MAX_POINTS });
+        await scoreRecord.update({ total_score: scoreRecord.total_score + MAX_POINTS, updated_at: new Date() });
       } else {
         await ChildScore.create({
           id: uuidv4(), child_id: child.id,
-          tree_id: treeItem.tree_id, total_score: MAX_POINTS,
+          tree_id: treeItem.tree_id, total_score: MAX_POINTS, updated_at: new Date(),
         });
       }
     }

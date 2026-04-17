@@ -126,18 +126,20 @@ const submitAssessment = async (req, res) => {
 
       for (const task of treeData.tasks) {
         const content_type_id = contentTypeMap[task.content_type] || 1;
-        let item_id = uuidv4();
+        const item_id = uuidv4();
+        const tree_item_id = uuidv4();
 
         if (task.content_type === 'quiz') {
-          const quiz = await Quiz.create({
+          await Quiz.create({
             id: item_id,
             child_id: child.id,
             level: result_level,
             total_questions: 5,
             status: 'pending',
+            tree_id: tree.id,
+            tree_item_id,
           });
         } else if (task.content_type === 'homework') {
-          const teacher = await Teacher.findByPk(assessment.teacher_id);
           await Homework.create({
             id: item_id,
             teacher_id: assessment.teacher_id,
@@ -147,6 +149,8 @@ const submitAssessment = async (req, res) => {
             start_date: new Date(),
             due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
             status: 'pending',
+            tree_id: tree.id,
+            tree_item_id,
           });
         } else if (task.content_type === 'activity') {
           await Activity.create({
@@ -155,16 +159,19 @@ const submitAssessment = async (req, res) => {
             title: task.title,
             description: task.description,
             status: 'pending',
+            tree_id: tree.id,
+            tree_item_id,
           });
         }
 
         await TreeItem.create({
-          id: uuidv4(),
+          id: tree_item_id,
           tree_id: tree.id,
           content_type_id,
           item_id,
           status: 'pending',
           order_num: task.order,
+          max_points: 10,
         });
       }
 
@@ -174,6 +181,7 @@ const submitAssessment = async (req, res) => {
         child_id: child.id,
         tree_id: tree.id,
         total_score: 0,
+        updated_at: new Date(),
       });
 
       // Notify parent

@@ -66,16 +66,29 @@ const approveHomework = async (req, res) => {
       return res.status(400).json({ message: 'Homework not yet submitted' });
     }
 
-    const { earned_points } = req.body;
+    const { earned_points, feedback_ar, feedback_en, grade } = req.body;
     const MAX_POINTS = 10;
     const points = earned_points !== undefined ? earned_points : MAX_POINTS;
 
     const child = await ChildProfile.findByPk(homework.child_id);
     if (!child) return res.status(404).json({ message: 'Child not found' });
 
+    await homework.update({
+      status: 'approved',
+      approved_at: new Date(),
+      grade: grade !== undefined ? grade : null,
+      feedback_ar: feedback_ar || null,
+      feedback_en: feedback_en || null,
+    });
+
     const treeItem = await TreeItem.findOne({ where: { item_id: homework.id, content_type_id: 2 } });
     if (treeItem) {
-      await treeItem.update({ status: 'completed' });
+      await treeItem.update({
+        status: 'completed',
+        earned_points: points,
+        max_points: MAX_POINTS,
+        completed_at: new Date(),
+      });
 
       await ChildScoreLog.create({
         id: uuidv4(),
@@ -92,16 +105,16 @@ const approveHomework = async (req, res) => {
         where: { child_id: child.id, tree_id: treeItem.tree_id },
       });
       if (scoreRecord) {
-        await scoreRecord.update({ total_score: scoreRecord.total_score + points });
+        await scoreRecord.update({ total_score: scoreRecord.total_score + points, updated_at: new Date() });
       } else {
         await ChildScore.create({
           id: uuidv4(), child_id: child.id,
-          tree_id: treeItem.tree_id, total_score: points,
+          tree_id: treeItem.tree_id, total_score: points, updated_at: new Date(),
         });
       }
     }
 
-    res.json({ message: 'Homework approved' });
+    res.json({ message: 'Homework approved', homework });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error', error: err.message });
