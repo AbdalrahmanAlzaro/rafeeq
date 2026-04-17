@@ -5,6 +5,7 @@ module.exports = (sequelize) => {
   class Quiz extends Model {
     static associate(models) {
       Quiz.belongsTo(models.ChildProfile, { foreignKey: 'child_id' });
+      Quiz.belongsTo(models.LearningTree, { foreignKey: 'tree_id' });
       Quiz.hasMany(models.QuizQuestion, { foreignKey: 'quiz_id' });
       Quiz.hasMany(models.QuizAnswer, { foreignKey: 'quiz_id' });
     }
@@ -50,6 +51,17 @@ module.exports = (sequelize) => {
       created_at: {
         type: DataTypes.DATE,
         allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+      tree_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        defaultValue: null,
+      },
+      tree_item_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        defaultValue: null,
       },
     },
     {

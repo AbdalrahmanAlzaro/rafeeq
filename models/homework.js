@@ -6,6 +6,7 @@ module.exports = (sequelize) => {
     static associate(models) {
       Homework.belongsTo(models.Teacher, { foreignKey: 'teacher_id' });
       Homework.belongsTo(models.ChildProfile, { foreignKey: 'child_id' });
+      Homework.belongsTo(models.LearningTree, { foreignKey: 'tree_id' });
     }
   }
 
@@ -73,6 +74,37 @@ module.exports = (sequelize) => {
       created_at: {
         type: DataTypes.DATE,
         allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+      feedback_ar: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        defaultValue: null,
+      },
+      feedback_en: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        defaultValue: null,
+      },
+      grade: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: null,
+      },
+      approved_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null,
+      },
+      tree_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        defaultValue: null,
+      },
+      tree_item_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        defaultValue: null,
       },
     },
     {

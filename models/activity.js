@@ -5,6 +5,7 @@ module.exports = (sequelize) => {
   class Activity extends Model {
     static associate(models) {
       Activity.belongsTo(models.ChildProfile, { foreignKey: 'child_id' });
+      Activity.belongsTo(models.LearningTree, { foreignKey: 'tree_id' });
     }
   }
 
@@ -40,6 +41,52 @@ module.exports = (sequelize) => {
       created_at: {
         type: DataTypes.DATE,
         allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+      instructions_ar: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        defaultValue: null,
+      },
+      instructions_en: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        defaultValue: null,
+      },
+      materials_needed_ar: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        defaultValue: null,
+      },
+      materials_needed_en: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        defaultValue: null,
+      },
+      image_url: {
+        type: DataTypes.STRING(500),
+        allowNull: true,
+        defaultValue: null,
+      },
+      expected_outcome_ar: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        defaultValue: null,
+      },
+      expected_outcome_en: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        defaultValue: null,
+      },
+      tree_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        defaultValue: null,
+      },
+      tree_item_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        defaultValue: null,
       },
     },
     {

@@ -1,3 +1,5 @@
+'use strict';
+
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { User, School, Teacher, Parent, ChildProfile } = require('../models');
@@ -5,35 +7,39 @@ const { generateAccessToken, generateRefreshToken } = require('../utils/generate
 const { generateOTP, getOTPExpiry, sendOTP } = require('../utils/sendOTP');
 const jwt = require('jsonwebtoken');
 
-// Temporary in-memory OTP store (replace with DB/Redis in production)
-const otpStore = {};
-
 const register = async (req, res) => {
   try {
-    const { role, national_id, phone, email, password, language,
-            // school fields
-            name_ar, name_en, location, description, contact_phone,
-            // teacher fields
-            school_id, full_name_ar, full_name_en, specialization,
-            // parent fields (reuses full_name_ar, full_name_en)
-          } = req.body;
+    const {
+      role, national_id, phone, email, password, language,
+      // school fields
+      name_ar, name_en, location, description, contact_phone,
+      // teacher fields
+      school_id, full_name_ar, full_name_en, specialization,
+      // parent fields (reuses full_name_ar, full_name_en)
+    } = req.body;
 
-    if (!role || !phone) {
-      return res.status(400).json({ message: 'role and phone are required' });
+    if (!role || !national_id || !phone) {
+      return res.status(400).json({ message: 'role, national_id, and phone are required' });
     }
 
     const password_hash = password
       ? await bcrypt.hash(password, 10)
       : await bcrypt.hash(uuidv4(), 10);
 
+    const otp = generateOTP();
+    const otp_expires_at = getOTPExpiry();
+
     const user = await User.create({
       id: uuidv4(),
       role,
-      national_id: national_id || null,
+      national_id,
       phone,
       email: email || null,
       password_hash,
       language: language || 'ar',
+      is_active: false,
+      otp_code: otp,
+      otp_expires_at,
     });
 
     if (role === 'school') {
@@ -77,12 +83,9 @@ const register = async (req, res) => {
     }
     // 'child' role: child_profiles created separately by teacher
 
-    const otp = generateOTP();
-    const expiry = getOTPExpiry();
-    otpStore[phone] = { otp, expiry };
     await sendOTP(phone, otp);
 
-    res.status(201).json({ message: 'Registered successfully. OTP sent to phone.', user_id: user.id });
+    res.status(201).json({ message: 'Registered successfully. OTP sent to phone.' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -96,14 +99,15 @@ const login = async (req, res) => {
 
     const user = await User.findOne({ where: { national_id } });
     if (!user) return res.status(404).json({ message: 'User not found' });
-    if (!user.is_active) return res.status(403).json({ message: 'Account is inactive' });
+    if (!user.phone) return res.status(400).json({ message: 'No phone number associated with this account' });
 
     const otp = generateOTP();
-    const expiry = getOTPExpiry();
-    otpStore[user.phone] = { otp, expiry };
+    const otp_expires_at = getOTPExpiry();
+
+    await user.update({ otp_code: otp, otp_expires_at });
     await sendOTP(user.phone, otp);
 
-    res.json({ message: 'OTP sent to phone', phone: user.phone });
+    res.json({ message: 'OTP sent to registered phone number' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -112,21 +116,25 @@ const login = async (req, res) => {
 
 const verifyOTP = async (req, res) => {
   try {
-    const { phone, otp } = req.body;
-    if (!phone || !otp) return res.status(400).json({ message: 'phone and otp are required' });
+    const { national_id, otp } = req.body;
+    if (!national_id || !otp) return res.status(400).json({ message: 'national_id and otp are required' });
 
-    const record = otpStore[phone];
-    if (!record) return res.status(400).json({ message: 'OTP not found or expired' });
-    if (Date.now() > record.expiry) {
-      delete otpStore[phone];
+    const user = await User.findOne({ where: { national_id } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (!user.otp_code || !user.otp_expires_at) {
+      return res.status(400).json({ message: 'OTP not found. Please request a new one.' });
+    }
+    if (new Date() > new Date(user.otp_expires_at)) {
+      await user.update({ otp_code: null, otp_expires_at: null });
       return res.status(400).json({ message: 'OTP expired' });
     }
-    if (record.otp !== otp) return res.status(400).json({ message: 'Invalid OTP' });
+    if (user.otp_code !== otp) {
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
 
-    delete otpStore[phone];
-
-    const user = await User.findOne({ where: { phone } });
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    // Clear OTP and activate account after successful verification
+    await user.update({ otp_code: null, otp_expires_at: null, is_active: true });
 
     const accessToken = generateAccessToken({ id: user.id, role: user.role });
     const refreshToken = generateRefreshToken({ id: user.id, role: user.role });
@@ -140,18 +148,20 @@ const verifyOTP = async (req, res) => {
 
 const resendOTP = async (req, res) => {
   try {
-    const { phone } = req.body;
-    if (!phone) return res.status(400).json({ message: 'phone is required' });
+    const { national_id } = req.body;
+    if (!national_id) return res.status(400).json({ message: 'national_id is required' });
 
-    const user = await User.findOne({ where: { phone } });
+    const user = await User.findOne({ where: { national_id } });
     if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user.phone) return res.status(400).json({ message: 'No phone number associated with this account' });
 
     const otp = generateOTP();
-    const expiry = getOTPExpiry();
-    otpStore[phone] = { otp, expiry };
-    await sendOTP(phone, otp);
+    const otp_expires_at = getOTPExpiry();
 
-    res.json({ message: 'OTP resent' });
+    await user.update({ otp_code: otp, otp_expires_at });
+    await sendOTP(user.phone, otp);
+
+    res.json({ message: 'OTP resent to registered phone number' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -177,7 +187,7 @@ const refreshToken = async (req, res) => {
 const getMe = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
-      attributes: { exclude: ['password_hash'] },
+      attributes: { exclude: ['password_hash', 'otp_code', 'otp_expires_at'] },
     });
     if (!user) return res.status(404).json({ message: 'User not found' });
 

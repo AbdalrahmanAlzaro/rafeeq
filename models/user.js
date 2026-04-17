@@ -49,11 +49,36 @@ module.exports = (sequelize) => {
       created_at: {
         type: DataTypes.DATE,
         allowNull: false,
+        defaultValue: DataTypes.NOW,
       },
       is_active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
         allowNull: false,
+      },
+      otp_expires_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      otp_code: {
+        type: DataTypes.STRING(10),
+        allowNull: true,
+        defaultValue: null,
+      },
+      is_verified: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      avatar_url: {
+        type: DataTypes.STRING(500),
+        allowNull: true,
+        defaultValue: null,
+      },
+      refresh_token: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        defaultValue: null,
       },
     },
     {
