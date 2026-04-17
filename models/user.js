@@ -1,107 +1,67 @@
 'use strict';
-const { Model } = require('sequelize');
+const { Model, DataTypes } = require('sequelize');
 
-module.exports = (sequelize, DataTypes) => {
+module.exports = (sequelize) => {
   class User extends Model {
     static associate(models) {
-      User.hasMany(models.Child, { foreignKey: 'parent_user_id', as: 'Children' });
-      User.hasMany(models.Child, { foreignKey: 'teacher_user_id', as: 'TaughtChildren' });
-      User.hasMany(models.Exam, { foreignKey: 'teacher_user_id' });
-      User.hasMany(models.Assignment, { foreignKey: 'teacher_user_id' });
-      User.hasMany(models.QuestionBank, { foreignKey: 'teacher_user_id' });
-      User.hasMany(models.Message, { foreignKey: 'sender_user_id', as: 'SentMessages' });
-      User.hasMany(models.Message, { foreignKey: 'receiver_user_id', as: 'ReceivedMessages' });
+      User.hasOne(models.School, { foreignKey: 'user_id' });
+      User.hasOne(models.Teacher, { foreignKey: 'user_id' });
+      User.hasOne(models.Parent, { foreignKey: 'user_id' });
       User.hasMany(models.Notification, { foreignKey: 'user_id' });
-      User.belongsTo(models.School, { foreignKey: 'school_id' });
+      User.hasMany(models.SavedArticle, { foreignKey: 'user_id' });
+      User.hasMany(models.ChatbotSession, { foreignKey: 'user_id' });
     }
   }
 
   User.init(
     {
       id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
         allowNull: false,
       },
-      name_en: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      name_ar: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      phone: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true,
-      },
-      email: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        unique: true,
-      },
-      password_hash: {
-        type: DataTypes.STRING,
+      role: {
+        type: DataTypes.ENUM('parent', 'teacher', 'child', 'school'),
         allowNull: false,
       },
       national_id: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        unique: true,
-      },
-      avatar_url: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      role: {
-        type: DataTypes.ENUM('parent', 'teacher', 'school_admin'),
-        allowNull: false,
-      },
-      school_id: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-      },
-      grade_en: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      grade_ar: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      section_en: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      section_ar: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      otp_code: {
         type: DataTypes.STRING(10),
         allowNull: true,
       },
-      otp_expires_at: {
-        type: DataTypes.DATE,
+      phone: {
+        type: DataTypes.STRING(15),
         allowNull: true,
       },
-      is_verified: {
-        type: DataTypes.BOOLEAN,
+      email: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+      },
+      password_hash: {
+        type: DataTypes.STRING(255),
         allowNull: false,
-        defaultValue: false,
+      },
+      language: {
+        type: DataTypes.ENUM('ar', 'en'),
+        defaultValue: 'ar',
+        allowNull: false,
+      },
+      created_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
       },
       is_active: {
         type: DataTypes.BOOLEAN,
-        allowNull: false,
         defaultValue: true,
+        allowNull: false,
       },
     },
     {
       sequelize,
       modelName: 'User',
       tableName: 'users',
+      underscored: true,
+      timestamps: false,
     }
   );
 

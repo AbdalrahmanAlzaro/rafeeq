@@ -1,24 +1,11 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const auth = require("../middleware/auth");
-const {
-  addChild,
-  getMyChildren,
-  getChild,
-  updateChild,
-  updateNotes,
-  assignTeacher,
-  getTeacherStudents,
-  deactivateChild,
-} = require("../controllers/childController");
+const { createChild, updateChild, getChildProgress } = require('../controllers/childController');
+const auth = require('../middleware/auth');
+const isTeacher = require('../middleware/isTeacher');
 
-router.post("/", auth, addChild);
-router.get("/", auth, getMyChildren);
-router.get("/my-students", auth, getTeacherStudents);
-router.get("/:id", auth, getChild);
-router.put("/:id", auth, updateChild);
-router.put("/:id/notes", auth, updateNotes);
-router.put("/:id/assign-teacher", auth, assignTeacher);
-router.delete("/:id", auth, deactivateChild);
+router.post('/', auth, isTeacher, createChild);
+router.put('/:id', auth, isTeacher, updateChild);
+router.get('/:id/progress', auth, getChildProgress);
 
 module.exports = router;

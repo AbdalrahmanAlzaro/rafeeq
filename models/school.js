@@ -1,63 +1,57 @@
 'use strict';
-const { Model } = require('sequelize');
+const { Model, DataTypes } = require('sequelize');
 
-module.exports = (sequelize, DataTypes) => {
+module.exports = (sequelize) => {
   class School extends Model {
     static associate(models) {
-      School.hasMany(models.User, { foreignKey: 'school_id', as: 'Staff' });
-      School.hasMany(models.Child, { foreignKey: 'school_id' });
+      School.belongsTo(models.User, { foreignKey: 'user_id' });
+      School.hasMany(models.Teacher, { foreignKey: 'school_id' });
     }
   }
 
   School.init(
     {
       id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
         allowNull: false,
       },
-      name_en: {
-        type: DataTypes.STRING,
+      user_id: {
+        type: DataTypes.UUID,
         allowNull: false,
       },
       name_ar: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(255),
+        allowNull: false,
+      },
+      name_en: {
+        type: DataTypes.STRING(255),
         allowNull: true,
       },
-      description_en: {
+      location: {
+        type: DataTypes.STRING(255),
+        allowNull: false,
+      },
+      description: {
         type: DataTypes.TEXT,
-        allowNull: true,
-      },
-      description_ar: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-      },
-      location_en: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      location_ar: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      logo_url: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      contact_email: {
-        type: DataTypes.STRING,
         allowNull: true,
       },
       contact_phone: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(15),
         allowNull: true,
+      },
+      created_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
       },
     },
     {
       sequelize,
       modelName: 'School',
       tableName: 'schools',
+      underscored: true,
+      timestamps: false,
     }
   );
 

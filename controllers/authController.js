@@ -1,346 +1,202 @@
-const { User } = require("../models");
-const {
-  generateAccessToken,
-  generateRefreshToken,
-} = require("../utils/generateToken");
-const { generateOTP, getOTPExpiry, sendOTP } = require("../utils/sendOTP");
-const jwt = require("jsonwebtoken");
+const bcrypt = require('bcryptjs');
+const { v4: uuidv4 } = require('uuid');
+const { User, School, Teacher, Parent, ChildProfile } = require('../models');
+const { generateAccessToken, generateRefreshToken } = require('../utils/generateToken');
+const { generateOTP, getOTPExpiry, sendOTP } = require('../utils/sendOTP');
+const jwt = require('jsonwebtoken');
 
-const loginWithNationalId = async (req, res) => {
+// Temporary in-memory OTP store (replace with DB/Redis in production)
+const otpStore = {};
+
+const register = async (req, res) => {
   try {
-    const { national_id } = req.body;
+    const { role, national_id, phone, email, password, language,
+            // school fields
+            name_ar, name_en, location, description, contact_phone,
+            // teacher fields
+            school_id, full_name_ar, full_name_en, specialization,
+            // parent fields (reuses full_name_ar, full_name_en)
+          } = req.body;
 
-    if (!national_id) {
-      return res.status(400).json({ message: "National ID is required" });
+    if (!role || !phone) {
+      return res.status(400).json({ message: 'role and phone are required' });
     }
 
-    const user = await User.findOne({ where: { national_id } });
-    if (!user) {
-      return res
-        .status(404)
-        .json({ message: "No account found with this National ID" });
-    }
+    const password_hash = password
+      ? await bcrypt.hash(password, 10)
+      : await bcrypt.hash(uuidv4(), 10);
 
-    if (!user.is_active) {
-      return res.status(403).json({ message: "Account is deactivated" });
+    const user = await User.create({
+      id: uuidv4(),
+      role,
+      national_id: national_id || null,
+      phone,
+      email: email || null,
+      password_hash,
+      language: language || 'ar',
+    });
+
+    if (role === 'school') {
+      if (!name_ar || !location) {
+        await user.destroy();
+        return res.status(400).json({ message: 'name_ar and location are required for school' });
+      }
+      await School.create({
+        id: uuidv4(),
+        user_id: user.id,
+        name_ar,
+        name_en: name_en || null,
+        location,
+        description: description || null,
+        contact_phone: contact_phone || null,
+      });
+    } else if (role === 'teacher') {
+      if (!school_id || !full_name_ar) {
+        await user.destroy();
+        return res.status(400).json({ message: 'school_id and full_name_ar are required for teacher' });
+      }
+      await Teacher.create({
+        id: uuidv4(),
+        user_id: user.id,
+        school_id,
+        full_name_ar,
+        full_name_en: full_name_en || null,
+        specialization: specialization || null,
+      });
+    } else if (role === 'parent') {
+      if (!full_name_ar) {
+        await user.destroy();
+        return res.status(400).json({ message: 'full_name_ar is required for parent' });
+      }
+      await Parent.create({
+        id: uuidv4(),
+        user_id: user.id,
+        full_name_ar,
+        full_name_en: full_name_en || null,
+      });
     }
+    // 'child' role: child_profiles created separately by teacher
 
     const otp = generateOTP();
-    const otp_expires_at = getOTPExpiry();
+    const expiry = getOTPExpiry();
+    otpStore[phone] = { otp, expiry };
+    await sendOTP(phone, otp);
 
-    await user.update({ otp_code: otp, otp_expires_at });
-    await sendOTP(user.phone, otp);
-
-    return res.status(200).json({
-      message: "OTP sent to your registered phone number",
-      user_id: user.id,
-      phone: maskPhone(user.phone),
-    });
+    res.status(201).json({ message: 'Registered successfully. OTP sent to phone.', user_id: user.id });
   } catch (err) {
     console.error(err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+const login = async (req, res) => {
+  try {
+    const { national_id } = req.body;
+    if (!national_id) return res.status(400).json({ message: 'national_id is required' });
+
+    const user = await User.findOne({ where: { national_id } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user.is_active) return res.status(403).json({ message: 'Account is inactive' });
+
+    const otp = generateOTP();
+    const expiry = getOTPExpiry();
+    otpStore[user.phone] = { otp, expiry };
+    await sendOTP(user.phone, otp);
+
+    res.json({ message: 'OTP sent to phone', phone: user.phone });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
 const verifyOTP = async (req, res) => {
   try {
-    const { national_id, otp } = req.body;
+    const { phone, otp } = req.body;
+    if (!phone || !otp) return res.status(400).json({ message: 'phone and otp are required' });
 
-    if (!national_id || !otp) {
-      return res
-        .status(400)
-        .json({ message: "National ID and OTP are required" });
+    const record = otpStore[phone];
+    if (!record) return res.status(400).json({ message: 'OTP not found or expired' });
+    if (Date.now() > record.expiry) {
+      delete otpStore[phone];
+      return res.status(400).json({ message: 'OTP expired' });
     }
+    if (record.otp !== otp) return res.status(400).json({ message: 'Invalid OTP' });
 
-    const user = await User.findOne({ where: { national_id } });
-    if (!user) {
-      return res
-        .status(404)
-        .json({ message: "No account found with this National ID" });
-    }
+    delete otpStore[phone];
 
-    if (!user.otp_code) {
-      return res
-        .status(400)
-        .json({ message: "No OTP requested. Please login first." });
-    }
+    const user = await User.findOne({ where: { phone } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    if (user.otp_code !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
-    }
+    const accessToken = generateAccessToken({ id: user.id, role: user.role });
+    const refreshToken = generateRefreshToken({ id: user.id, role: user.role });
 
-    if (new Date() > new Date(user.otp_expires_at)) {
-      return res
-        .status(400)
-        .json({ message: "OTP has expired. Please request a new one." });
-    }
-
-    await user.update({
-      is_verified: true,
-      otp_code: null,
-      otp_expires_at: null,
-    });
-
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
-
-    return res.status(200).json({
-      message: "Login successful",
-      accessToken,
-      refreshToken,
-      user: {
-        id: user.id,
-        name_en: user.name_en,
-        name_ar: user.name_ar,
-        phone: user.phone,
-        email: user.email,
-        role: user.role,
-        national_id: user.national_id,
-        avatar_url: user.avatar_url,
-        school_id: user.school_id,
-        grade_en: user.grade_en,
-        grade_ar: user.grade_ar,
-        section_en: user.section_en,
-        section_ar: user.section_ar,
-        is_verified: user.is_verified,
-      },
-    });
+    res.json({ accessToken, refreshToken, role: user.role, user_id: user.id });
   } catch (err) {
     console.error(err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
 const resendOTP = async (req, res) => {
   try {
-    const { national_id } = req.body;
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ message: 'phone is required' });
 
-    if (!national_id) {
-      return res.status(400).json({ message: "National ID is required" });
-    }
-
-    const user = await User.findOne({ where: { national_id } });
-    if (!user) {
-      return res
-        .status(404)
-        .json({ message: "No account found with this National ID" });
-    }
-
-    if (!user.is_active) {
-      return res.status(403).json({ message: "Account is deactivated" });
-    }
+    const user = await User.findOne({ where: { phone } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
     const otp = generateOTP();
-    const otp_expires_at = getOTPExpiry();
-
-    await user.update({ otp_code: otp, otp_expires_at });
-    await sendOTP(user.phone, otp);
-
-    return res.status(200).json({
-      message: "OTP resent successfully",
-      phone: maskPhone(user.phone),
-    });
-  } catch (err) {
-    console.error(err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
-  }
-};
-
-const register = async (req, res) => {
-  try {
-    const {
-      name_en,
-      name_ar,
-      phone,
-      email,
-      national_id,
-      role,
-      school_id,
-      grade_en,
-      grade_ar,
-      section_en,
-      section_ar,
-    } = req.body;
-
-    if (!name_en || !phone || !national_id || !role) {
-      return res.status(400).json({
-        message: "name_en, phone, national_id and role are required",
-      });
-    }
-
-    const validRoles = ["parent", "teacher", "school_admin"];
-    if (!validRoles.includes(role)) {
-      return res.status(400).json({ message: "Invalid role" });
-    }
-
-    const existingNID = await User.findOne({ where: { national_id } });
-    if (existingNID) {
-      return res
-        .status(409)
-        .json({ message: "National ID already registered" });
-    }
-
-    const existingPhone = await User.findOne({ where: { phone } });
-    if (existingPhone) {
-      return res
-        .status(409)
-        .json({ message: "Phone number already registered" });
-    }
-
-    if (email) {
-      const existingEmail = await User.findOne({ where: { email } });
-      if (existingEmail) {
-        return res.status(409).json({ message: "Email already registered" });
-      }
-    }
-
-    const otp = generateOTP();
-    const otp_expires_at = getOTPExpiry();
-
-    const user = await User.create({
-      name_en,
-      name_ar: name_ar || null,
-      phone,
-      email: email || null,
-      password_hash: "N/A",
-      national_id,
-      role,
-      school_id: school_id || null,
-      grade_en: grade_en || null,
-      grade_ar: grade_ar || null,
-      section_en: section_en || null,
-      section_ar: section_ar || null,
-      otp_code: otp,
-      otp_expires_at,
-      is_verified: false,
-      is_active: true,
-    });
-
+    const expiry = getOTPExpiry();
+    otpStore[phone] = { otp, expiry };
     await sendOTP(phone, otp);
 
-    return res.status(201).json({
-      message: "Registration successful. OTP sent to your phone.",
-      user_id: user.id,
-      phone: maskPhone(phone),
-    });
+    res.json({ message: 'OTP resent' });
   } catch (err) {
     console.error(err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
 const refreshToken = async (req, res) => {
   try {
     const { token } = req.body;
-
-    if (!token) {
-      return res.status(400).json({ message: "Refresh token is required" });
-    }
+    if (!token) return res.status(400).json({ message: 'token is required' });
 
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    const user = await User.findByPk(decoded.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    const user = await User.findOne({
-      where: { id: decoded.id, is_active: true },
-    });
-
-    if (!user) {
-      return res.status(401).json({ message: "User not found or inactive" });
-    }
-
-    const accessToken = generateAccessToken(user);
-
-    return res.status(200).json({ accessToken });
+    const accessToken = generateAccessToken({ id: user.id, role: user.role });
+    res.json({ accessToken });
   } catch (err) {
-    return res
-      .status(401)
-      .json({ message: "Invalid or expired refresh token" });
+    res.status(401).json({ message: 'Invalid or expired refresh token' });
   }
 };
 
 const getMe = async (req, res) => {
   try {
-    return res.status(200).json({
-      user: {
-        id: req.user.id,
-        name_en: req.user.name_en,
-        name_ar: req.user.name_ar,
-        phone: req.user.phone,
-        email: req.user.email,
-        role: req.user.role,
-        national_id: req.user.national_id,
-        avatar_url: req.user.avatar_url,
-        school_id: req.user.school_id,
-        grade_en: req.user.grade_en,
-        grade_ar: req.user.grade_ar,
-        section_en: req.user.section_en,
-        section_ar: req.user.section_ar,
-        is_verified: req.user.is_verified,
-        is_active: req.user.is_active,
-      },
+    const user = await User.findByPk(req.user.id, {
+      attributes: { exclude: ['password_hash'] },
     });
-  } catch (err) {
-    console.error(err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
-  }
-};
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-const updateProfile = async (req, res) => {
-  try {
-    const { name_en, name_ar, email, avatar_url } = req.body;
-
-    if (email && email !== req.user.email) {
-      const existing = await User.findOne({ where: { email } });
-      if (existing) {
-        return res.status(409).json({ message: "Email already in use" });
-      }
+    let profile = null;
+    if (user.role === 'school') {
+      profile = await School.findOne({ where: { user_id: user.id } });
+    } else if (user.role === 'teacher') {
+      profile = await Teacher.findOne({ where: { user_id: user.id } });
+    } else if (user.role === 'parent') {
+      profile = await Parent.findOne({ where: { user_id: user.id } });
+    } else if (user.role === 'child') {
+      profile = await ChildProfile.findOne({ where: { user_id: user.id } });
     }
 
-    await req.user.update({
-      name_en: name_en || req.user.name_en,
-      name_ar: name_ar !== undefined ? name_ar : req.user.name_ar,
-      email: email !== undefined ? email : req.user.email,
-      avatar_url: avatar_url !== undefined ? avatar_url : req.user.avatar_url,
-    });
-
-    return res.status(200).json({
-      message: "Profile updated successfully",
-      user: {
-        id: req.user.id,
-        name_en: req.user.name_en,
-        name_ar: req.user.name_ar,
-        email: req.user.email,
-        avatar_url: req.user.avatar_url,
-      },
-    });
+    res.json({ user, profile });
   } catch (err) {
     console.error(err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
-const maskPhone = (phone) => {
-  if (!phone || phone.length < 6) return phone;
-  return phone.slice(0, 4) + "****" + phone.slice(-3);
-};
-
-module.exports = {
-  register,
-  loginWithNationalId,
-  verifyOTP,
-  resendOTP,
-  refreshToken,
-  getMe,
-  updateProfile,
-};
+module.exports = { register, login, verifyOTP, resendOTP, refreshToken, getMe };

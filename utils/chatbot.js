@@ -1,6 +1,6 @@
-const Anthropic = require("@anthropic-ai/sdk");
+const OpenAI = require("openai");
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const SYSTEM_PROMPT = `
 You are Rafeeq Assistant — a warm, professional, and helpful AI companion
@@ -23,7 +23,7 @@ Rules:
 `;
 
 const chatWithBot = async ({ history, summary, newMessage }) => {
-  let messages = [];
+  let messages = [{ role: "system", content: SYSTEM_PROMPT }];
 
   if (summary) {
     messages.push({
@@ -36,22 +36,24 @@ const chatWithBot = async ({ history, summary, newMessage }) => {
         "Thank you, I have context from our previous conversation and I am ready to help.",
     });
   } else {
-    messages = history.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
+    for (const m of history) {
+      messages.push({
+        role: m.role,
+        content: m.content,
+      });
+    }
   }
 
   messages.push({ role: "user", content: newMessage });
 
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1000,
-    system: SYSTEM_PROMPT,
+  const response = await client.chat.completions.create({
+    model: "gpt-4o",
     messages,
+    max_tokens: 1000,
+    temperature: 0.7,
   });
 
-  return response.content[0].text;
+  return response.choices[0].message.content;
 };
 
 const summarizeSession = async (messages) => {
@@ -59,18 +61,19 @@ const summarizeSession = async (messages) => {
     .map((m) => `${m.role === "user" ? "Parent" : "Assistant"}: ${m.content}`)
     .join("\n");
 
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 300,
+  const response = await client.chat.completions.create({
+    model: "gpt-4o",
     messages: [
       {
         role: "user",
         content: `Summarize this conversation in 3 to 5 sentences capturing the key topics discussed and any important context:\n\n${conversation}`,
       },
     ],
+    max_tokens: 300,
+    temperature: 0.5,
   });
 
-  return response.content[0].text;
+  return response.choices[0].message.content;
 };
 
 module.exports = { chatWithBot, summarizeSession };

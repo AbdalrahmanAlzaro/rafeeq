@@ -1,55 +1,66 @@
 'use strict';
-const { Model } = require('sequelize');
+const { Model, DataTypes } = require('sequelize');
 
-module.exports = (sequelize, DataTypes) => {
+module.exports = (sequelize) => {
   class Notification extends Model {
     static associate(models) {
       Notification.belongsTo(models.User, { foreignKey: 'user_id' });
+      Notification.belongsTo(models.NotificationType, { foreignKey: 'type_id' });
     }
   }
 
   Notification.init(
     {
       id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
         allowNull: false,
       },
       user_id: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
+      type_id: {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
-      title_en: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
       title_ar: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      body_en: {
-        type: DataTypes.TEXT,
+        type: DataTypes.STRING(255),
         allowNull: false,
+      },
+      title_en: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
       },
       body_ar: {
         type: DataTypes.TEXT,
-        allowNull: true,
-      },
-      type: {
-        type: DataTypes.ENUM('assignment', 'quiz', 'homework', 'message', 'tree_ready', 'task_confirmed', 'announcement'),
         allowNull: false,
+      },
+      body_en: {
+        type: DataTypes.TEXT,
+        allowNull: true,
       },
       is_read: {
         type: DataTypes.BOOLEAN,
-        allowNull: false,
         defaultValue: false,
+        allowNull: false,
+      },
+      ref_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+      },
+      created_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
       },
     },
     {
       sequelize,
       modelName: 'Notification',
       tableName: 'notifications',
+      underscored: true,
+      timestamps: false,
     }
   );
 

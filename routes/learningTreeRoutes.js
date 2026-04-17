@@ -1,22 +1,10 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const auth = require("../middleware/auth");
-const {
-  getChildTree,
-  getTree,
-  getTreeTasks,
-  getTask,
-  markTaskDone,
-  confirmTask,
-  submitQuizAnswers,
-} = require("../controllers/learningTreeController");
+const { getChildTree, getTreeProgress, completeTreeItem } = require('../controllers/learningTreeController');
+const auth = require('../middleware/auth');
 
-router.get("/child/:child_id", auth, getChildTree);
-router.get("/:id", auth, getTree);
-router.get("/:id/tasks", auth, getTreeTasks);
-router.get("/:id/tasks/:task_id", auth, getTask);
-router.put("/:id/tasks/:task_id/done", auth, markTaskDone);
-router.put("/:id/tasks/:task_id/confirm", auth, confirmTask);
-router.post("/:id/tasks/:task_id/quiz/submit", auth, submitQuizAnswers);
+router.get('/child/:child_id', auth, getChildTree);
+router.get('/:id/progress', auth, getTreeProgress);
+router.post('/:id/items/:item_id/complete', auth, completeTreeItem);
 
 module.exports = router;

@@ -1,102 +1,55 @@
 'use strict';
-
 module.exports = {
   async up(queryInterface, Sequelize) {
+    await queryInterface.sequelize.query("CREATE TYPE app_language AS ENUM ('ar', 'en');");
+    await queryInterface.sequelize.query("CREATE TYPE user_role AS ENUM ('parent', 'teacher', 'child', 'school');");
     await queryInterface.createTable('users', {
       id: {
-        allowNull: false,
-        autoIncrement: true,
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.literal('gen_random_uuid()'),
         primaryKey: true,
-        type: Sequelize.INTEGER,
-      },
-      name_en: {
-        type: Sequelize.STRING,
         allowNull: false,
       },
-      name_ar: {
-        type: Sequelize.STRING,
-        allowNull: true,
-      },
-      phone: {
-        type: Sequelize.STRING,
-        allowNull: false,
-        unique: true,
-      },
-      email: {
-        type: Sequelize.STRING,
-        allowNull: true,
-        unique: true,
-      },
-      password_hash: {
-        type: Sequelize.STRING,
+      role: {
+        type: Sequelize.DataTypes.ENUM('parent', 'teacher', 'child', 'school'),
         allowNull: false,
       },
       national_id: {
-        type: Sequelize.STRING,
-        allowNull: true,
-        unique: true,
-      },
-      avatar_url: {
-        type: Sequelize.STRING,
-        allowNull: true,
-      },
-      role: {
-        type: Sequelize.ENUM('parent', 'teacher', 'school_admin'),
-        allowNull: false,
-      },
-      school_id: {
-        type: Sequelize.INTEGER,
-        allowNull: true,
-      },
-      grade_en: {
-        type: Sequelize.STRING,
-        allowNull: true,
-      },
-      grade_ar: {
-        type: Sequelize.STRING,
-        allowNull: true,
-      },
-      section_en: {
-        type: Sequelize.STRING,
-        allowNull: true,
-      },
-      section_ar: {
-        type: Sequelize.STRING,
-        allowNull: true,
-      },
-      otp_code: {
         type: Sequelize.STRING(10),
         allowNull: true,
       },
-      otp_expires_at: {
-        type: Sequelize.DATE,
+      phone: {
+        type: Sequelize.STRING(15),
         allowNull: true,
       },
-      is_verified: {
-        type: Sequelize.BOOLEAN,
+      email: {
+        type: Sequelize.STRING(255),
+        allowNull: true,
+      },
+      password_hash: {
+        type: Sequelize.STRING(255),
         allowNull: false,
-        defaultValue: false,
+      },
+      language: {
+        type: Sequelize.DataTypes.ENUM('ar', 'en'),
+        defaultValue: 'ar',
+        allowNull: false,
+      },
+      created_at: {
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.literal('now()'),
+        allowNull: false,
       },
       is_active: {
         type: Sequelize.BOOLEAN,
-        allowNull: false,
         defaultValue: true,
-      },
-      createdAt: {
         allowNull: false,
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
-      },
-      updatedAt: {
-        allowNull: false,
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
     });
   },
-
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('users');
-    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_users_role";');
+    await queryInterface.sequelize.query('DROP TYPE IF EXISTS app_language;');
+    await queryInterface.sequelize.query('DROP TYPE IF EXISTS user_role;');
   },
 };

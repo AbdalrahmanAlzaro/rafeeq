@@ -1,91 +1,46 @@
 'use strict';
-
 module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('learning_trees', {
       id: {
-        allowNull: false,
-        autoIncrement: true,
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.literal('gen_random_uuid()'),
         primaryKey: true,
-        type: Sequelize.INTEGER,
+        allowNull: false,
       },
       child_id: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.UUID,
         allowNull: false,
-        references: {
-          model: 'children',
-          key: 'id',
-        },
+        references: { model: 'child_profiles', key: 'id' },
         onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
       },
-      exam_id: {
+      level: {
         type: Sequelize.INTEGER,
         allowNull: false,
-        references: {
-          model: 'exams',
-          key: 'id',
-        },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
       },
-      subject_id: {
-        type: Sequelize.INTEGER,
+      topic: {
+        type: Sequelize.STRING(255),
         allowNull: false,
-        references: {
-          model: 'subjects',
-          key: 'id',
-        },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
-      },
-      subject_level_id: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'subject_levels',
-          key: 'id',
-        },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
-      },
-      current_level: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        defaultValue: 1,
       },
       status: {
-        type: Sequelize.ENUM('generating', 'active', 'completed'),
+        type: Sequelize.STRING(20),
+        defaultValue: 'active',
         allowNull: false,
-        defaultValue: 'generating',
       },
-      ai_summary_en: {
-        type: Sequelize.TEXT,
-        allowNull: true,
-      },
-      ai_summary_ar: {
-        type: Sequelize.TEXT,
-        allowNull: true,
-      },
-      generated_at: {
+      created_at: {
         type: Sequelize.DATE,
-        allowNull: true,
-      },
-      createdAt: {
+        defaultValue: Sequelize.literal('now()'),
         allowNull: false,
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
-      },
-      updatedAt: {
-        allowNull: false,
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
     });
+    await queryInterface.sequelize.query(
+      "ALTER TABLE learning_trees ADD CONSTRAINT chk_lt_level CHECK (level >= 1 AND level <= 7);"
+    );
+    await queryInterface.sequelize.query(
+      "ALTER TABLE learning_trees ADD CONSTRAINT chk_lt_status CHECK (status IN ('active', 'completed'));"
+    );
   },
-
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('learning_trees');
-    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_learning_trees_status";');
   },
 };
