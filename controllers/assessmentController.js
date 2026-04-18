@@ -118,7 +118,6 @@ const submitAssessment = async (req, res) => {
         id: uuidv4(),
         child_id: child.id,
         level: result_level,
-        topic: child.learning_difficulty,
         status: 'active',
       });
 

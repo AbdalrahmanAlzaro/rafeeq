@@ -61,10 +61,18 @@ const register = async (req, res) => {
         await user.destroy();
         return res.status(400).json({ message: 'school_id and full_name_ar are required for teacher' });
       }
+      let school = await School.findByPk(school_id);
+      if (!school) {
+        school = await School.findOne({ where: { user_id: school_id } });
+      }
+      if (!school) {
+        await user.destroy();
+        return res.status(404).json({ message: 'School not found. Provide a valid school_id.' });
+      }
       await Teacher.create({
         id: uuidv4(),
         user_id: user.id,
-        school_id,
+        school_id: school.id,
         full_name_ar,
         full_name_en: full_name_en || null,
         specialization: specialization || null,

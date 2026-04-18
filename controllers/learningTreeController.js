@@ -1,7 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const {
   LearningTree, TreeItem, ChildScore, ChildScoreLog, ChildProfile,
-  Quiz, Homework, Activity,
+  Quiz, Homework, Activity, Topic,
 } = require('../models');
 const { createNotification } = require('../utils/createNotification');
 const { generateLearningTree } = require('../utils/generateTree');
@@ -13,6 +13,7 @@ const getChildTree = async (req, res) => {
 
     const tree = await LearningTree.findOne({
       where: { child_id: child.id, status: 'active' },
+      include: [{ model: Topic }],
     });
     if (!tree) return res.status(404).json({ message: 'No active learning tree found' });
 
@@ -124,7 +125,6 @@ const completeTreeItem = async (req, res) => {
             id: uuidv4(),
             child_id: child.id,
             level: nextLevel,
-            topic: child.learning_difficulty,
             status: 'active',
           });
 

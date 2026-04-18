@@ -19,6 +19,7 @@ const activityRoutes = require("./routes/activityRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const chatbotRoutes = require("./routes/chatbotRoutes");
 const articleRoutes = require("./routes/articleRoutes");
+const subjectRoutes = require("./routes/subjectRoutes");
 
 app.use(cors());
 app.use(express.json());
@@ -38,6 +39,7 @@ app.use("/api/activities", activityRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/articles", articleRoutes);
+app.use("/api/subjects", subjectRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "Rafeeq API is running" });

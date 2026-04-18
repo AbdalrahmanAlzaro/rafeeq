@@ -1,6 +1,6 @@
 const { Notification, NotificationType } = require('../models');
 
-const createNotification = async (user_id, type_name, title_ar, title_en, body_ar, body_en, ref_id = null) => {
+const createNotification = async (user_id, type_name, title_ar, title_en, body_ar, body_en, ref_id = null, ref_type = null) => {
   try {
     const notifType = await NotificationType.findOne({ where: { name: type_name } });
     if (!notifType) return null;
@@ -13,6 +13,7 @@ const createNotification = async (user_id, type_name, title_ar, title_en, body_a
       body_ar,
       body_en,
       ref_id,
+      ref_type,
     });
   } catch (err) {
     console.error('createNotification error:', err.message);
